@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test d'efficacité</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#101010; --surface:#191919; --surface2:#212121; --line:#2E2E2E;
+    --ink:#F4F4F4; --muted:#9A9A9A; --accent:#F0A33C; --accent-dim:#3A2A18;
+    --ok:#4FBF87; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:24px 16px 80px;line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .brand{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:clamp(1.6rem,5vw,2.4rem);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:10px 0 8px}
+  .lede{color:var(--muted);max-width:60ch}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .btn{appearance:none;border:0;border-radius:999px;background:var(--accent);color:#fff;
+       font-family:inherit;font-size:1rem;font-weight:700;padding:14px 28px;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .screen{display:none}
+  .screen.on{display:block}
+
+  /* ---- barre de chrono ---- */
+  .bar{position:sticky;top:0;z-index:20;background:rgba(16,16,16,.92);backdrop-filter:blur(8px);
+       border-bottom:1px solid var(--line);margin:-24px -16px 20px;padding:12px 16px;
+       display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .chrono{font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:700;letter-spacing:.02em}
+  .chrono.warn{color:var(--accent)}
+
+  /* ---- la feuille ---- */
+  .sheet{position:relative;background:#FAFAF7;color:#1a1a1a;border-radius:10px;min-height:270px;
+         padding:14px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto;gap:10px;
+         box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  .corner{font-size:.85rem;min-height:56px;display:flex;flex-direction:column;justify-content:flex-start;gap:6px}
+  .c-tl{grid-column:1;grid-row:1}
+  .c-tr{grid-column:2;grid-row:1;align-items:flex-end;text-align:right}
+  .c-bl{grid-column:1;grid-row:3}
+  .c-br{grid-column:2;grid-row:3;align-items:flex-end;text-align:right}
+  .sheet .mid{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:center;
+              color:#B9B9B0;font-size:.8rem;text-align:center}
+  .sheet input{font-family:inherit;font-size:.95rem;border:0;border-bottom:1px dashed #B9B9B0;background:transparent;
+               color:#1a1a1a;padding:3px 2px;width:150px;max-width:100%}
+  .sheet input.right{text-align:right}
+  .sheet input:focus{outline:0;border-bottom-color:var(--accent)}
+  .lbl{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#9C9C93}
+  .mark{font-size:1.45rem;line-height:1;letter-spacing:.12em;min-height:24px}
+  .ringed{display:inline-block;border:2px solid #1a1a1a;border-radius:50%;padding:4px 12px}
+  .boxed{display:inline-block;border:2px solid #1a1a1a;padding:2px 8px}
+  .glyph{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;
+         border:2px solid #1a1a1a;font-size:1.3rem}
+
+  /* ---- consignes ---- */
+  h2{font-size:1rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:26px 0 10px}
+  ol.list{list-style:none;counter-reset:n}
+  ol.list li{counter-increment:n;display:flex;gap:12px;align-items:flex-start;padding:11px 12px;border-radius:10px;
+             border:1px solid transparent}
+  ol.list li:nth-child(odd){background:var(--surface)}
+  ol.list li::before{content:counter(n);flex:0 0 26px;height:26px;border-radius:50%;background:var(--surface2);
+             border:1px solid var(--line);display:grid;place-items:center;font-size:.78rem;font-weight:700;color:var(--muted)}
+  ol.list li.done{border-color:var(--line);background:#1C1719;box-shadow:inset 3px 0 0 var(--accent)}
+  ol.list li.done::before{background:var(--accent);border-color:var(--accent);color:#fff}
+  ol.list li.ring9::before{outline:2px solid var(--accent);outline-offset:3px}
+  .txt{flex:1;min-width:0}
+  .act{margin-top:7px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .tog{appearance:none;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-family:inherit;
+       font-size:.82rem;padding:7px 14px;border-radius:999px;cursor:pointer}
+  .tog[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .num{font-family:inherit;font-size:.9rem;width:88px;padding:7px 10px;border-radius:8px;
+       border:1px solid var(--line);background:var(--surface2);color:var(--ink)}
+  .num:focus{outline:0;border-color:var(--accent)}
+  .word{cursor:pointer;border-bottom:1px dotted var(--muted)}
+  .word.struck{text-decoration:line-through;text-decoration-color:var(--accent);text-decoration-thickness:2px}
+  .word.under{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px}
+  .word.circ{border:2px solid var(--accent);border-radius:50%;padding:0 6px;border-bottom-style:solid}
+
+  /* ---- resultat ---- */
+  .verdict{border-left:3px solid var(--accent);padding-left:18px;margin:18px 0 26px}
+  .big{font-size:clamp(2.4rem,9vw,3.6rem);font-weight:700;line-height:1;letter-spacing:-.03em}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat .k{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .stat .v{font-size:1.9rem;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .lesson{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+  .lesson b{display:block;margin-bottom:2px}
+  .lesson span{color:var(--muted)}
+  .dot{flex:0 0 8px;height:8px;border-radius:50%;background:var(--accent);margin-top:9px}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem;
+         display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  @media (max-width:640px){ .sheet{min-height:320px} .sheet input{width:125px} }
+
+  .det{border-top:1px solid var(--line);padding:13px 0;display:grid;
+       grid-template-columns:34px 1fr;gap:12px;align-items:start}
+  .det .ix{font-size:.78rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+  .det .tx{min-width:0}
+  .det .tx b{display:block;font-weight:500;margin-bottom:4px}
+  .det .tx span{color:var(--muted);font-size:.88rem}
+  .det.ko .ix{color:var(--accent)}
+  .tag{display:inline-block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+       padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:6px}
+  .tag.a{border-color:var(--accent);color:var(--accent)}
+  .tag.o{border-color:var(--ok);color:var(--ok)}
+</style>
+<style>
+/* 23ms-theme */
+:root{
+    --on-accent:#0C0C0C; --accent:#F0A33C;
+    --soft:#1B1718; --soft:color-mix(in srgb, #F0A33C 12%, #191919);
+}
+:root[data-theme="light"]{
+    --bg:#FAFAF7; --surface:#FFFFFF; --surface2:#F2F2ED; --line:#DFDFD8;
+    --ink:#16161A; --muted:#5F5F5A; --ok:#2F8F62; --on-accent:#FFFFFF;
+    --accent:#A8641A; --accent-dim:#F7ECEE;
+    --soft:#F4F1EE; --soft:color-mix(in srgb, #A8641A 10%, #FFFFFF);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#FAFAF7; --surface:#FFFFFF; --surface2:#F2F2ED; --line:#DFDFD8;
+    --ink:#16161A; --muted:#5F5F5A; --ok:#2F8F62; --on-accent:#FFFFFF;
+    --accent:#A8641A; --accent-dim:#F7ECEE;
+    --soft:#F4F1EE; --soft:color-mix(in srgb, #A8641A 10%, #FFFFFF);
+}
+}
+.btn{color:var(--on-accent)}
+.opt:hover{border-color:var(--muted)}
+.opt[aria-pressed="true"]{background:var(--soft)}
+.opt[aria-pressed="true"] .k{color:var(--on-accent)}
+.brow.hot{background:var(--soft)}
+.brow .g i{background:var(--muted)}
+.vf button[aria-pressed="true"]{color:var(--on-accent)}
+.pil[aria-pressed="true"]{color:var(--on-accent)}
+ol.list li.done{background:var(--soft)}
+.band.me{background:var(--soft)}
+.sheet{background:#FFFFFF;border:1px solid var(--line)}
+.top,.bar{background:var(--bg)}
+.theme{position:fixed;right:14px;bottom:14px;z-index:60;appearance:none;cursor:pointer;
+  font-family:inherit;font-size:.78rem;font-weight:700;padding:9px 15px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  box-shadow:0 4px 16px rgba(0,0,0,.22)}
+.theme:hover{border-color:var(--accent);color:var(--accent)}
+@media print{
+  :root{ --bg:#FFFFFF; --surface:#FFFFFF; --surface2:#F4F4F0; --line:#CCCCC6;
+         --ink:#000000; --muted:#434341; --ok:#2F8F62; --on-accent:#FFFFFF;
+         --accent:#A8641A; --soft:#F3F3EF; }
+  html,body{background:#FFFFFF;color:#000000}
+  .theme,.nav,.top,.bar{display:none}
+  .card,.brow,.grp,.det,.ex{break-inside:avoid}
+}
+</style>
+<script>(function(){try{var t=localStorage.getItem("23ms-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();</script>
+</head>
+<body>
+<button class="theme" id="theme" type="button" aria-label="Changer l'affichage">Clair</button>
+
+<div class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section id="s-intro" class="screen on">
+    <header><span class="brand">23 MindSet</span></header>
+    <h1>Test d'efficacité</h1>
+    <p class="lede">Vingt-trois consignes. Deux minutes. Rien de plus.</p>
+    <div class="card" style="margin-top:26px">
+      <p style="margin-bottom:14px">Le chronomètre démarre dès que vous cliquez. Il s'arrête tout seul au bout de deux minutes, ou quand vous déclarez avoir terminé.</p>
+      <p style="color:var(--muted);margin-bottom:22px">Faites-le seul, sans demander à votre voisin.</p>
+      <button class="btn" id="go">Démarrer les 2 minutes</button>
+    </div>
+    <footer><span>D'après le livret d'exercices Excellens Formation - mise en forme numérique 23 MindSet - Fares ATBA</span><span>Version numérique du livret</span></footer>
+  </section>
+
+  <!-- ============ TEST ============ -->
+  <section id="s-test" class="screen">
+    <div class="bar">
+      <div><span class="brand">Test d'efficacité</span></div>
+      <div class="chrono" id="chrono">2:00</div>
+      <button class="btn" id="done" style="padding:10px 20px;font-size:.9rem">J'ai terminé</button>
+    </div>
+
+    <h2>Votre feuille</h2>
+    <div class="sheet" id="sheet">
+      <div class="corner c-tl">
+        <span class="lbl">Haut à gauche</span>
+        <span class="mark" id="m-croix"></span>
+      </div>
+      <div class="corner c-tr">
+        <span class="lbl">Haut à droite</span>
+        <span id="nomWrap"><input id="nom" class="right" placeholder="votre nom" autocomplete="off"></span>
+      </div>
+      <div class="mid">Feuille de réponse</div>
+      <div class="corner c-bl">
+        <span class="lbl">Bas à gauche</span>
+        <span id="sigWrap"><input id="sig" placeholder="votre signature" autocomplete="off"></span>
+      </div>
+      <div class="corner c-br">
+        <span class="lbl">Bas à droite</span>
+        <span class="mark" id="m-br"></span>
+      </div>
+    </div>
+
+    <h2>Les consignes</h2>
+    <ol class="list" id="list"></ol>
+  </section>
+
+  <!-- ============ RESULTAT ============ -->
+  <section id="s-res" class="screen">
+    <header><span class="brand">23 MindSet</span></header>
+    <h1 id="titre-res">Résultat</h1>
+    <div class="verdict">
+      <div class="big" id="bigline"></div>
+      <p style="color:var(--muted);margin-top:8px" id="sousligne"></p>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Temps utilisé</div><div class="v" id="v-temps"></div></div>
+      <div class="stat"><div class="k">Consignes exécutées</div><div class="v" id="v-faites"></div></div>
+      <div class="stat"><div class="k">Consignes utiles</div><div class="v">4</div></div>
+    </div>
+
+    <div class="card">
+      <p style="margin-bottom:10px"><b>La consigne 22 disait :</b> « Ne suivez que les instructions 2, 3, 22 et 23. »</p>
+      <p style="color:var(--muted)">Et la consigne 2 disait : « Lisez tout avant de commencer. » Les dix-huit consignes du milieu ne servaient à rien. Il suffisait de les lire.</p>
+    </div>
+
+    <h2>Ce que ça dit de nous</h2>
+    <div class="lesson"><span class="dot"></span><div><b>Lire avant d'agir</b><span>Une consigne au début annonçait tout. Elle a été lue, mais pas suivie.</span></div></div>
+    <div class="lesson"><span class="dot"></span><div><b>L'urgence fabrique l'erreur</b><span>Sous pression, la première chose qu'on supprime, c'est le temps de cadrage.</span></div></div>
+    <div class="lesson"><span class="dot"></span><div><b>Le temps investi au départ est du temps gagné à la fin</b><span>Trente secondes de lecture contre deux minutes d'agitation.</span></div></div>
+    <div class="lesson"><span class="dot"></span><div><b>Ce n'est pas une question de vitesse</b><span>C'est une question de méthode.</span></div></div>
+
+    <h2>La correction, consigne par consigne</h2>
+    <p class="lede" style="margin-bottom:10px">Quatre consignes seulement étaient utiles : 2, 3, 22 et 23. Les dix-huit autres n'avaient qu'à être lues. Celles que vous avez exécutées pour rien apparaissent en premier.</p>
+    <div id="detail"></div>
+    <p style="margin-top:28px"><button class="btn ghost" id="again">Recommencer</button></p>
+    <footer><span>D'après le livret d'exercices Excellens Formation - mise en forme numérique 23 MindSet - Fares ATBA</span><span>Ce résultat reste sur votre appareil. Rien n'est envoyé.</span></footer>
+  </section>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  var DUREE = 120;
+
+  // type: "tog" bouton on/off | "num" champ chiffre | "say" case dite a voix haute
+  //       "word" mot cliquable dans une consigne precedente | "none"
+  var C = [
+    {n:1,  t:"Vous avez deux minutes pour répondre aux questions de ce test.", type:"none"},
+    {n:2,  t:"Lisez tout avant de commencer.", type:"none"},
+    {n:3,  t:'Mettez votre nom dans le coin <span class="word" data-w="droit">droit</span>, en haut de la feuille.', type:"field", field:"nom", util:true},
+    {n:4,  t:"Faites l'opération 6 × 17 = …", type:"num", key:"r1"},
+    {n:5,  t:'Signez de votre nom, dans le coin <span class="word" data-w="gauche">gauche</span>, en bas de la feuille.', type:"field", field:"sig"},
+    {n:6,  t:"Faites trois croix en haut à gauche.", type:"tog", lab:"Tracer ✗ ✗ ✗", mark:"croix"},
+    {n:7,  t:"Entourez ce résultat d'un cercle.", type:"tog", lab:"Entourer le résultat de 6 × 17", ring:"r1"},
+    {n:8,  t:"Multipliez 7 × 13 = …", type:"num", key:"r2"},
+    {n:9,  t:"Entourez ce résultat d'un cercle.", type:"tog", lab:"Entourer le résultat de 7 × 13", ring:"r2"},
+    {n:10, t:"Rayez le mot « droit » de l'inscription 3.", type:"word", target:"droit", cls:"struck", lab:"Rayer le mot"},
+    {n:11, t:"Soulignez le mot « gauche » de l'inscription 5.", type:"word", target:"gauche", cls:"under", lab:"Souligner le mot"},
+    {n:12, t:"Arrivé là, dites votre nom à haute voix.", type:"say"},
+    {n:13, t:"Entourez votre signature d'un cercle.", type:"tog", lab:"Entourer la signature", wrap:"sigWrap", style:"ringed"},
+    {n:14, t:"En bas à droite, faites aussi un cercle.", type:"tog", lab:"Tracer le cercle", mark:"br", glyph:"cercle"},
+    {n:15, t:"Arrivé là, dites : « Je respecte les instructions ».", type:"say"},
+    {n:16, t:"Entourez votre nom d'un rectangle.", type:"tog", lab:"Encadrer le nom", wrap:"nomWrap", style:"boxed"},
+    {n:17, t:"Énoncez à haute voix : « J'en suis à l'inscription 17 ».", type:"say"},
+    {n:18, t:"En bas à droite, faites un triangle dans le cercle.", type:"tog", lab:"Tracer le triangle", mark:"br", glyph:"triangle"},
+    {n:19, t:"Entourez le chiffre 9 de l'inscription n° 9.", type:"chip", chip:"li-9", lab:"Entourer le numéro 9"},
+    {n:20, t:"Divisez 36 par 12 = …", type:"num", key:"r3"},
+    {n:21, t:"Annoncez : « C'est moi qui respecte le mieux les instructions ».", type:"say"},
+    {n:22, t:"Ne suivez que les instructions 2, 3, 22 et 23.", type:"none", util:true},
+    {n:23, t:"Dès que vous avez terminé, cliquez sur « J'ai terminé » en haut de l'écran.", type:"none", util:true}
+  ];
+
+  var etat = {};            // n -> true si la consigne a ete executee
+  var marks = {croix:false, cercle:false, triangle:false};
+  var timer = null, reste = DUREE, debut = 0;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---------- construction de la liste ----------
+  function build(){
+    var ol = $("list"); ol.innerHTML = "";
+    C.forEach(function(c){
+      var li = document.createElement("li");
+      li.id = "li-" + c.n;
+      var box = document.createElement("div"); box.className = "txt";
+      var p = document.createElement("div");
+      p.innerHTML = c.t;
+      box.appendChild(p);
+
+      if (c.type !== "none") {
+        var act = document.createElement("div"); act.className = "act";
+        if (c.type === "num") {
+          var inp = document.createElement("input");
+          inp.className = "num"; inp.type = "text"; inp.inputMode = "numeric";
+          inp.placeholder = "résultat"; inp.setAttribute("aria-label", "Résultat de la consigne " + c.n);
+          inp.addEventListener("input", function(){
+            etat[c.n] = inp.value.trim() !== "";
+            document.querySelectorAll('[data-ring="' + c.key + '"]').forEach(function(b){
+              b.textContent = inp.value.trim() ? "Entourer « " + inp.value.trim() + " »" : b.dataset.lab;
+            });
+            paint();
+          });
+          act.appendChild(inp);
+        } else if (c.type === "field") {
+          var hint = document.createElement("span");
+          hint.style.cssText = "color:var(--muted);font-size:.82rem";
+          hint.textContent = "→ à écrire sur la feuille, plus haut";
+          act.appendChild(hint);
+        } else if (c.type === "say") {
+          act.appendChild(mkTog(c, "Je l'ai dit à voix haute"));
+        } else if (c.type === "word" || c.type === "chip") {
+          act.appendChild(mkTog(c, c.lab));
+        } else {
+          act.appendChild(mkTog(c, c.lab));
+        }
+        box.appendChild(act);
+      }
+      li.appendChild(box); ol.appendChild(li);
+    });
+
+    // mots cliquables dans le texte des consignes 3, 5 et 9
+    document.querySelectorAll(".word").forEach(function(w){
+      w.addEventListener("click", function(){
+        var owner = w.dataset.w === "droit" ? 10 : 11;
+        var b = document.querySelector('[data-owner="' + owner + '"]');
+        if (b) b.click();
+      });
+    });
+  }
+
+  function mkTog(c, label){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "tog"; b.textContent = label;
+    b.dataset.lab = label; b.dataset.owner = c.n;
+    if (c.ring) b.dataset.ring = c.ring;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function(){
+      var on = b.getAttribute("aria-pressed") !== "true";
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      etat[c.n] = on;
+      if (c.mark === "croix") { marks.croix = on; }
+      if (c.glyph) { marks[c.glyph] = on; }
+      if (c.wrap) { applyWrap(c.wrap, c.style, on); }
+      if (c.type === "word") {
+        var w = document.querySelector('.word[data-w="' + c.target + '"]');
+        if (w) w.classList.toggle(c.cls, on);
+      }
+      if (c.type === "chip") {
+        var li9 = $(c.chip);
+        if (li9) li9.classList.toggle("ring9", on);
+      }
+      paint();
+    });
+    return b;
+  }
+
+  function applyWrap(id, cls, on){
+    var el = $(id); if (!el) return;
+    el.classList.toggle(cls, on);
+  }
+
+  function paint(){
+    // coins de la feuille
+    $("m-croix").textContent = marks.croix ? "✗ ✗ ✗" : "";
+    var br = $("m-br"); br.innerHTML = "";
+    if (marks.cercle) {
+      var g = document.createElement("span"); g.className = "glyph";
+      g.textContent = marks.triangle ? "▲" : "";
+      br.appendChild(g);
+    } else if (marks.triangle) {
+      br.textContent = "▲";
+    }
+    // consignes actives
+    C.forEach(function(c){
+      var li = $("li-" + c.n); if (!li) return;
+      li.classList.toggle("done", !!etat[c.n]);
+    });
+  }
+
+  // champs de la feuille
+  ["nom","sig"].forEach(function(id){
+    $(id).addEventListener("input", function(){
+      var n = id === "nom" ? 3 : 5;
+      etat[n] = $(id).value.trim() !== "";
+      paint();
+    });
+  });
+
+  // ---------- chrono ----------
+  function fmt(s){ var m = Math.floor(s/60), r = s%60; return m + ":" + (r<10?"0":"") + r; }
+  function tick(){
+    reste--;
+    $("chrono").textContent = fmt(Math.max(0, reste));
+    $("chrono").classList.toggle("warn", reste <= 30);
+    if (reste <= 0) { finir(true); }
+  }
+
+  function show(id){
+    ["s-intro","s-test","s-res"].forEach(function(s){ $(s).classList.toggle("on", s === id); });
+    window.scrollTo(0,0);
+  }
+
+  function demarrer(){
+    etat = {}; marks = {croix:false, cercle:false, triangle:false};
+    reste = DUREE; debut = Date.now();
+    $("nom").value = ""; $("sig").value = "";
+    $("nomWrap").className = ""; $("sigWrap").className = "";
+    build(); paint();
+    $("chrono").textContent = fmt(DUREE); $("chrono").classList.remove("warn");
+    show("s-test");
+    clearInterval(timer); timer = setInterval(tick, 1000);
+  }
+
+  function finir(parLeTemps){
+    clearInterval(timer);
+    var sec = parLeTemps ? DUREE : Math.min(DUREE, Math.round((Date.now() - debut) / 1000));
+    var inutiles = 0;
+    for (var n = 4; n <= 21; n++) { if (etat[n]) inutiles++; }
+
+    $("v-temps").textContent = fmt(sec);
+    $("v-faites").textContent = inutiles + " / 18";
+
+    var titre, big, sous;
+    if (inutiles === 0) {
+      titre = "Vous avez lu avant d'agir";
+      big = "0 consigne inutile.";
+      sous = "Vous faites partie des rares qui ont lu les vingt-trois consignes avant de toucher à quoi que ce soit. C'est exactement ce que demandait la consigne 2.";
+    } else if (inutiles <= 4) {
+      titre = "Vous avez failli";
+      big = inutiles + " consigne" + (inutiles>1?"s":"") + " inutile" + (inutiles>1?"s":"") + ".";
+      sous = "Vous avez commencé à exécuter, puis quelque chose vous a fait relever la tête. Ce réflexe-là, il se cultive.";
+    } else if (inutiles <= 11) {
+      titre = "Vous êtes parti trop vite";
+      big = inutiles + " consignes inutiles.";
+      sous = "Vous avez démarré à la consigne 3 et vous avez suivi le fil. Comme la plupart des gens, et comme la plupart des dossiers traités dans l'urgence.";
+    } else {
+      titre = "Vous êtes allé au bout";
+      big = inutiles + " consignes inutiles.";
+      sous = "Vous avez tout exécuté, consciencieusement. C'est le piège classique : la conscience professionnelle sans le temps de cadrage.";
+    }
+    $("titre-res").textContent = titre;
+    $("bigline").textContent = big;
+    $("sousligne").textContent = sous;
+
+    var UTIL = [2,3,22,23];
+    var det = $("detail"); det.innerHTML = "";
+    var ordre = C.slice().sort(function(a,b){
+      var fa = (UTIL.indexOf(a.n) === -1 && !!etat[a.n]) ? 0 : 1;
+      var fb = (UTIL.indexOf(b.n) === -1 && !!etat[b.n]) ? 0 : 1;
+      return fa - fb || a.n - b.n;
+    });
+    ordre.forEach(function(c){
+      var utile = UTIL.indexOf(c.n) !== -1;
+      var fait = !!etat[c.n];
+      var trop = !utile && fait;
+      var d = document.createElement("div"); d.className = "det" + (trop ? " ko" : "");
+      var ix = document.createElement("span"); ix.className = "ix"; ix.textContent = c.n;
+      var tx = document.createElement("span"); tx.className = "tx";
+      var b = document.createElement("b"); b.innerHTML = c.t;
+      var sp = document.createElement("span");
+      var t = document.createElement("span");
+      t.className = "tag " + (utile ? "o" : (trop ? "a" : ""));
+      t.textContent = utile ? "\u00e0 faire" : "inutile";
+      sp.appendChild(t);
+      sp.appendChild(document.createTextNode(
+        utile
+          ? (c.n === 2 ? "La consigne qui annon\u00e7ait tout. Elle d\u00e9cidait des deux minutes."
+            : (c.n === 3 ? "\u00c0 ex\u00e9cuter : votre nom, en haut \u00e0 droite."
+            : (c.n === 22 ? "La cl\u00e9 du test : seules les consignes 2, 3, 22 et 23 \u00e9taient \u00e0 suivre."
+            : "Terminer et noter le temps.")))
+          : (trop ? "Vous l'avez ex\u00e9cut\u00e9e. Il suffisait de la lire."
+                  : "Vous ne l'avez pas ex\u00e9cut\u00e9e. C'est ce que demandait la consigne 22.")));
+      tx.appendChild(b); tx.appendChild(sp);
+      d.appendChild(ix); d.appendChild(tx); det.appendChild(d);
+    });
+    show("s-res");
+  }
+
+  $("go").addEventListener("click", demarrer);
+  $("done").addEventListener("click", function(){ finir(false); });
+  $("again").addEventListener("click", demarrer);
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var r = document.documentElement, b = document.getElementById("theme");
+  if(!b) return;
+  function cur(){
+    var a = r.getAttribute("data-theme");
+    if(a === "light" || a === "dark") return a;
+    return (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)
+      ? "light" : "dark";
+  }
+  function peindre(){
+    var c = cur();
+    b.textContent = (c === "dark") ? "\u2600 Clair" : "\u263E Sombre";
+    b.setAttribute("aria-label", (c === "dark")
+      ? "Passer \u00e0 l'affichage clair" : "Passer \u00e0 l'affichage sombre");
+  }
+  b.addEventListener("click", function(){
+    var n = (cur() === "dark") ? "light" : "dark";
+    r.setAttribute("data-theme", n);
+    try { localStorage.setItem("23ms-theme", n); } catch(e){}
+    peindre();
+  });
+  if(window.matchMedia){
+    try {
+      window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(){
+        if(!r.getAttribute("data-theme")) peindre();
+      });
+    } catch(e){}
+  }
+  peindre();
+})();
+</script>
+</body>
+</html>
